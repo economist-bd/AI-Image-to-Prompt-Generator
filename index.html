@@ -41,30 +41,60 @@ button{width:100%;margin-top:10px;}
 </div>
 
 <script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js");
-}
+let imageData = "";
 
-let base64="";
-document.getElementById("img").onchange=e=>{
-  const r=new FileReader();
-  r.onload=()=>base64=r.result;
-  r.readAsDataURL(e.target.files[0]);
-}
+document.getElementById("img").onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-async function send(){
-  document.getElementById("out").value="Analyzing...";
-  const res = await fetch("/api/analyze", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      image:base64,
-      style:document.getElementById("style").value
-    })
-  });
-  const data = await res.json();
-  document.getElementById("out").value = data.prompt;
+  const img = new Image();
+  const reader = new FileReader();
+
+  reader.onload = () => img.src = reader.result;
+  reader.readAsDataURL(file);
+
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+
+    const MAX_WIDTH = 1024;
+    const scale = MAX_WIDTH / img.width;
+
+    canvas.width = MAX_WIDTH;
+    canvas.height = img.height * scale;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    imageData = canvas.toDataURL("image/jpeg", 0.7); // compressed
+  };
+};
+
+async function send() {
+  document.getElementById("out").value = "Analyzing image...";
+
+  try {
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image: imageData,
+        style: document.getElementById("style").value
+      })
+    });
+
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+
+    const data = await res.json();
+    document.getElementById("out").value = data.prompt;
+
+  } catch (err) {
+    document.getElementById("out").value =
+      "❌ Image too large. Please try a smaller image.";
+  }
 }
 </script>
+
 </body>
 </html>
