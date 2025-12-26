@@ -2,6 +2,10 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
+  if (!req.body?.image || req.body.image.length > 1_500_000) {
+  return res.status(413).json({ error: "Image too large" });
+}
+
 
   try {
     const { image, style } = req.body;
