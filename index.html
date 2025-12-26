@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Image to Prompt Generator</title>
+
+<style>
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#0f172a;
+  font-family:Arial, sans-serif;
+  color:#e5e7eb;
+}
+.card{
+  width:420px;
+  background:#020617;
+  padding:20px;
+  border-radius:14px;
+  box-shadow:0 10px 40px rgba(0,0,0,.6);
+}
+h2{text-align:center;}
+input, select{
+  width:100%;
+  margin:8px 0;
+}
+img{
+  width:100%;
+  display:none;
+  border-radius:10px;
+  margin:10px 0;
+}
+textarea{
+  width:100%;
+  height:220px;
+  background:#020617;
+  color:#e5e7eb;
+  border:1px solid #334155;
+  border-radius:10px;
+  padding:10px;
+  resize:none;
+}
+button{
+  width:100%;
+  margin-top:10px;
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  background:#6366f1;
+  color:white;
+  cursor:pointer;
+}
+button:hover{background:#4f46e5;}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>🧠 AI Image → Prompt</h2>
+
+  <input type="file" id="imageInput" accept="image/*">
+  
+  <select id="style">
+    <option value="realistic">Realistic</option>
+    <option value="cinematic">Cinematic</option>
+    <option value="anime">Anime</option>
+    <option value="3d">3D Illustration</option>
+  </select>
+
+  <img id="preview">
+  <textarea id="output" placeholder="AI generated prompt will appear here..."></textarea>
+  <button onclick="copyText()">📋 Copy Prompt</button>
+</div>
+
+<script>
+const API_KEY = "PASTE_YOUR_OPENAI_API_KEY_HERE"; // ⚠️ Demo only
+
+const imageInput = document.getElementById("imageInput");
+const preview = document.getElementById("preview");
+const output = document.getElementById("output");
+
+let base64Image = "";
+
+imageInput.addEventListener("change", ()=>{
+  const file = imageInput.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    preview.src = reader.result;
+    preview.style.display = "block";
+    base64Image = reader.result.split(",")[1];
+    analyzeImage();
+  };
+  reader.readAsDataURL(file);
+});
+
+async function analyzeImage(){
+  output.value = "Analyzing image with AI...";
+
+  const style = document.getElementById("style").value;
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + API_KEY
+    },
+    body: JSON.stringify({
+      model: "gpt-4.1-mini",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Analyze this image and generate a highly detailed AI image prompt in ${style} style. Include subject, environment, lighting, camera angle, mood, color, quality tags.`
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: "data:image/jpeg;base64," + base64Image
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 300
+    })
+  });
+
+  const data = await response.json();
+  output.value = data.choices[0].message.content;
+}
+
+function copyText(){
+  output.select();
+  document.execCommand("copy");
+  alert("Prompt copied!");
+}
+</script>
+
+</body>
+</html>
